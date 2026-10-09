@@ -6,62 +6,69 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(
-    name = "idempotency_records",
-    uniqueConstraints = {
-        @UniqueConstraint(columnNames = "idempotencyKey")
-    }
-)
-public class IdempotencyRecord {
+	    name = "idempotency_records",
+	    uniqueConstraints = {
+	        @UniqueConstraint(
+	            name = "uk_idempotency_key",
+	            columnNames = "idempotencyKey"
+	        )
+	    }
+	)
+	public class IdempotencyRecord {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	    @Id
+	    @GeneratedValue(strategy = GenerationType.IDENTITY)
+	    private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String idempotencyKey;
+	    @Column(nullable = false, unique = true, length = 100)
+	    private String idempotencyKey;
 
-    private String transactionRef;
+	    @OneToOne
+	    @JoinColumn(name = "transaction_id", nullable = false)
+	    private Transaction transaction;
 
-    private LocalDateTime createdAt;
+	    @Column(nullable = false)
+	    private LocalDateTime createdAt;
 
-    public IdempotencyRecord() {
-    }
+	    public IdempotencyRecord() {
+	    }
 
-    public IdempotencyRecord(
-            String idempotencyKey,
-            String transactionRef,
-            LocalDateTime createdAt) {
+	    public IdempotencyRecord(
+	            String idempotencyKey,
+	            Transaction transaction,
+	            LocalDateTime createdAt) {
 
-        this.idempotencyKey = idempotencyKey;
-        this.transactionRef = transactionRef;
-        this.createdAt = createdAt;
-    }
+	        this.idempotencyKey = idempotencyKey;
+	        this.transaction = transaction;
+	        this.createdAt = createdAt;
+	    }
 
-    public Long getId() {
-        return id;
-    }
 
-    public String getIdempotencyKey() {
-        return idempotencyKey;
-    }
+		public Long getId() {
+	        return id;
+	    }
 
-    public void setIdempotencyKey(String idempotencyKey) {
-        this.idempotencyKey = idempotencyKey;
-    }
+	    public String getIdempotencyKey() {
+	        return idempotencyKey;
+	    }
 
-    public String getTransactionRef() {
-        return transactionRef;
-    }
+	    public void setIdempotencyKey(String idempotencyKey) {
+	        this.idempotencyKey = idempotencyKey;
+	    }
 
-    public void setTransactionRef(String transactionRef) {
-        this.transactionRef = transactionRef;
-    }
+	    public Transaction getTransaction() {
+	        return transaction;
+	    }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
+	    public void setTransaction(Transaction transaction) {
+	        this.transaction = transaction;
+	    }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-}
+	    public LocalDateTime getCreatedAt() {
+	        return createdAt;
+	    }
+
+	    public void setCreatedAt(LocalDateTime createdAt) {
+	        this.createdAt = createdAt;
+	    }
+	}

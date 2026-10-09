@@ -43,7 +43,9 @@ public class AccountService {
             TransactionService txs,
             UserRepository userRepo,
             TransferLockManager lockManager,
-            TransactionTemplate transactionTemplate,PasswordEncoder passwordEncoder,IdempotencyRepository idempotencyRepo) {
+            TransactionTemplate transactionTemplate,
+            PasswordEncoder passwordEncoder,
+            IdempotencyRepository idempotencyRepo) {
 
         this.repo = repository;
         this.txs = txs;
@@ -141,12 +143,22 @@ public Account createAcc(CreateAccountRequest request) {
             );
         }
         Optional<IdempotencyRecord> key=idempotencyRepo.findByIdempotencyKey(idempotencyKey);
-        if(key.isPresent()) {
-        	return new ResponseWD(
-                    "Deposite Are Successfull",
-                    key.get().getTransactionRef(),
-                    acc,
-                    amount
+        if (key.isPresent()) {
+
+            Transaction transaction = key.get().getTransaction();
+
+            if (transaction.getType() == TransactionType.DEPOSIT) {
+
+                return new ResponseWD(
+                        "Deposit Already Processed",
+                        transaction.getTransactionRef(),
+                        acc,
+                        transaction.getAmount()
+                );
+            }
+
+            throw new IllegalArgumentException(
+                    "Idempotency key was already used for another operation"
             );
         }
 
@@ -180,7 +192,7 @@ public Account createAcc(CreateAccountRequest request) {
 
 
                 txs.create(tx);
-                IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,tx.getTransactionRef(),LocalDateTime.now());
+                IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,tx,LocalDateTime.now());
                 idempotencyRepo.save(record);
                 return new ResponseWD(
                         "Deposite Are Successfull",
@@ -213,12 +225,22 @@ public Account createAcc(CreateAccountRequest request) {
             );
         }
         Optional<IdempotencyRecord> key=idempotencyRepo.findByIdempotencyKey(idempotencyKey);
-        if(key.isPresent()) {
-        	return new ResponseWD(
-                    "Withdrawal Are Successfull",
-                    key.get().getTransactionRef(),
-                    acc,
-                    amount
+        if (key.isPresent()) {
+
+            Transaction transaction = key.get().getTransaction();
+
+            if (transaction.getType() == TransactionType.WITHDRAW) {
+
+                return new ResponseWD(
+                        "Withdrawal Already Process",
+                        transaction.getTransactionRef(),
+                        acc,
+                        transaction.getAmount()
+                );
+            }
+
+            throw new IllegalArgumentException(
+                    "Idempotency key was already used for another operation"
             );
         }
 
@@ -274,7 +296,7 @@ public Account createAcc(CreateAccountRequest request) {
                 );
 
                 txs.create(tx);
-                IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,tx.getTransactionRef(),LocalDateTime.now());
+                IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,tx,LocalDateTime.now());
                 idempotencyRepo.save(record);
                 return new ResponseWD(
                         "Withdrawal Are Successfull",
@@ -315,13 +337,23 @@ public Account createAcc(CreateAccountRequest request) {
             );
         }
         Optional<IdempotencyRecord> key=idempotencyRepo.findByIdempotencyKey(idempotencyKey);
-        if(key.isPresent()) {
-        	return new TransferResponse(
-                    "Transfer successful",
-                    key.get().getTransactionRef(),
-                    senderAccountNumber,
-                    receiverAccountNumber,
-                    amount
+        if (key.isPresent()) {
+
+            Transaction transaction = key.get().getTransaction();
+
+            if (transaction.getType() == TransactionType.TRANSFER_OUT) {
+
+                return new TransferResponse(
+                        "Transfer Already Processed",
+                        transaction.getTransactionRef(),
+                        senderAccountNumber,
+                        receiverAccountNumber,
+                        transaction.getAmount()
+                );
+            }
+
+            throw new IllegalArgumentException(
+                    "Idempotency key was already used for another operation"
             );
         }
         ReentrantLock senderLock =
@@ -375,27 +407,11 @@ public Account createAcc(CreateAccountRequest request) {
                                         "SEND_TO"
                                                 + receiverAccountNumber
                                 );
-
-                        Transaction receiverTx =
-                                createTransaction(
-                                        amount,
-                                        TransactionType.TRANSFER_IN,
-                                        receiver,
-                                        "RECIVE_FROM"
-                                                + senderAccountNumber
-                                );
-
                         senderTx.setStatus(
                                 TransactionStatus.FAILED
                         );
 
-                        receiverTx.setStatus(
-                                TransactionStatus.FAILED
-                        );
-
                         txs.createFailed(senderTx);
-                        txs.createFailed(receiverTx);
-
                         throw new InsufficientBalanceException(
                                 "Insufficient balance to make transaction"
                         );
@@ -448,8 +464,14 @@ public Account createAcc(CreateAccountRequest request) {
                     
                     repo.save(sender);
                     repo.save(receiver);
-                    IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,senderTx.getTransactionRef(),LocalDateTime.now());
+                    IdempotencyRecord record=new IdempotencyRecord(idempotencyKey,senderTx,LocalDateTime.now());
                     idempotencyRepo.save(record);
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
                     return new TransferResponse(
                             "Transfer successful",
                             senderTx.getTransactionRef(),

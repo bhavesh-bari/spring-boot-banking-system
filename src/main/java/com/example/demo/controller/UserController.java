@@ -1,22 +1,48 @@
+
 package com.example.demo.controller;
 
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-import com.example.demo.entity.*;
-import com.example.demo.service.AccountService;
+import com.example.demo.dto.AuthResponse;
+import com.example.demo.dto.LoginRequest;
+import com.example.demo.dto.RegisterRequest;
+import com.example.demo.dto.UserResponse;
 import com.example.demo.service.UserService;
 
-@RestController
-public class UserController {
-	private final UserService service;
-	public UserController(UserService service) {
-		this.service=service;
-	}
-	@PostMapping("/user/create")
-	public User createUser(@RequestBody User user) {
-	    return service.createUser(user);
-	}
+import jakarta.validation.Valid;
 
+@RestController
+@RequestMapping("/api/auth")
+@Validated
+public class UserController {
+
+    private final UserService authService;
+
+    public UserController(UserService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> register(
+            @Valid @RequestBody RegisterRequest request) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(authService.register(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request) {
+
+        return ResponseEntity.ok(
+                authService.login(request)
+        );
+    }
+    @GetMapping("/hi")
+    public String hi() {
+    	return "hi";    }
 }
