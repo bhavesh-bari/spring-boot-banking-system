@@ -2,7 +2,10 @@ package com.example.demo.service;
 
 import java.util.ArrayList;
 import java.util.Optional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,11 +50,28 @@ public class TransactionService {
         return repo.save(curr);
     }
     
-    public ArrayList<TransactionHistoryResponse> transactionHistory(String account){
-    	Optional<Account> acc=accrepo.findByAccountNumber(account);
-    	if(acc.isPresent()) {
-    		return repo.findAllByAccount(acc.get());
-    	}
-    	throw new IllegalArgumentException("Account No Not Found or Invalid");
+    public Page<TransactionHistoryResponse> transactionHistory(
+            String account, int page, int size) {
+
+        if (page < 0) {
+            throw new IllegalArgumentException("Page cannot be negative");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException(
+                "Page size must be between 1 and 100");
+        }
+
+        Account acc = accrepo.findByAccountNumber(account)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Account No Not Found or Invalid"));
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "id")
+        );
+
+        return repo.findAllByAccount(acc, pageable);
     }
 }

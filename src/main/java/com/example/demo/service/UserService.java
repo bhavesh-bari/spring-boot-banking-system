@@ -1,6 +1,8 @@
 
 package com.example.demo.service;
 
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -81,6 +83,15 @@ public class UserService {
                 jwtService.getExpirationSeconds(),
                 toUserResponse(user)
         );
+    }
+
+    public UserResponse getProfile(Long id) {
+    	Optional<User> user=userRepository.findById(id);
+    	System.out.print(user.get().getName());
+    	if(user.isPresent()) {
+    		return new UserResponse(user.get().getId(),user.get().getName(),user.get().getEmail(),user.get().getPhone());
+    	}
+    	return null;
     }
 
     private UserResponse toUserResponse(User user) {

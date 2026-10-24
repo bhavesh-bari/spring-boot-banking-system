@@ -1,20 +1,27 @@
 package com.example.demo.controller;
-import java.util.ArrayList;
+
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.demo.dto.TransactionHistoryRequest;
+
 import com.example.demo.dto.TransactionHistoryResponse;
 import com.example.demo.service.TransactionService;
+import org.springframework.data.domain.Page;
 @RestController
 public class TransactionController {
 	private final TransactionService service;
 	public TransactionController(TransactionService service) {
 		this.service=service;
 	}
+	
 	@GetMapping("/transaction/history")
-	ArrayList<TransactionHistoryResponse> getHistory(@RequestBody TransactionHistoryRequest request){
-		return service.transactionHistory(request.account());
+	public Page<TransactionHistoryResponse> getHistory(
+	        @RequestParam String account,
+	        @RequestParam(defaultValue = "0") int page,
+	        @RequestParam(defaultValue = "10") int size) {
+
+	    return service.transactionHistory(account, page, size);
 	}
 }
 

@@ -24,6 +24,7 @@ public class UserController {
     public UserController(UserService authService) {
         this.authService = authService;
     }
+    
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(
@@ -42,7 +43,9 @@ public class UserController {
                 authService.login(request)
         );
     }
-    @GetMapping("/hi")
-    public String hi() {
-    	return "hi";    }
+    @GetMapping("/profile")
+    public UserResponse getProfile(@RequestParam Long id) {
+    	return authService.getProfile(id);
+    }
+
 }

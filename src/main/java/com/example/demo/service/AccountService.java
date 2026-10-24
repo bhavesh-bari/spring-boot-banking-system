@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.example.demo.concurrency.TransferLockManager;
+import com.example.demo.dto.AccountResponse;
+import com.example.demo.dto.Accounts;
 import com.example.demo.dto.CreateAccountRequest;
 import com.example.demo.dto.ResponseWD;
 import com.example.demo.dto.TransferResponse;
@@ -71,50 +74,40 @@ public class AccountService {
 
 
 
-public Account createAcc(CreateAccountRequest request) {
+public AccountResponse createAcc(CreateAccountRequest request) {
 
     if (request == null) {
-        throw new IllegalArgumentException(
-                "Account request cannot be null");
+        throw new IllegalArgumentException("Account request cannot be null");
     }
 
     if (request.userId() == null) {
-        throw new IllegalArgumentException(
-                "User ID is required");
+        throw new IllegalArgumentException("User ID is required");
     }
 
     if (request.accountType() == null) {
-        throw new IllegalArgumentException(
-                "Account type is required");
+        throw new IllegalArgumentException("Account type is required");
     }
 
     if (request.balance() == null) {
-        throw new IllegalArgumentException(
-                "Initial balance is required");
+        throw new IllegalArgumentException("Initial balance is required");
     }
 
     if (request.balance().compareTo(BigDecimal.ZERO) < 0) {
-        throw new IllegalArgumentException(
-                "Initial balance cannot be negative");
+        throw new IllegalArgumentException("Initial balance cannot be negative");
     }
 
     validatePinValue(request.pin());
 
-    Optional<User> user =
-            userRepo.findById(request.userId());
+    User user = userRepo.findById(request.userId())
+            .orElseThrow(() -> new AccountNotFoundException(
+                    "User not found with ID: " + request.userId()));
 
-    if (user.isEmpty()) {
-        throw new AccountNotFoundException(
-                "User not found with ID: " + request.userId());
-    }
-
-    String hashedPin =
-            passwordEncoder.encode(request.pin());
+    String hashedPin = passwordEncoder.encode(request.pin());
 
     Account account = new Account(
             request.accountType(),
             request.balance(),
-            user.get(),
+            user,
             hashedPin
     );
 
@@ -124,9 +117,13 @@ public Account createAcc(CreateAccountRequest request) {
             "ACC" + (100 + savedAccount.getId())
     );
 
-    return repo.save(savedAccount);
-}
+    Account finalAccount = repo.save(savedAccount);
 
+    return new AccountResponse(
+            finalAccount.getAccountType().name(),
+            finalAccount.getAccountNumber()
+    );
+}
     public ResponseWD deposit(
             String acc,
             BigDecimal amount,
@@ -560,7 +557,14 @@ public Account createAcc(CreateAccountRequest request) {
         }
     }
 
-
+    public ArrayList<Accounts> getAccounts(Long id){
+    	Optional< User> user=userRepo.findById(id);
+    	if(user.isPresent()) {
+    		return repo.findAllByUser(user.get());
+    	}
+   	 	return null;
+    }
+    
     private Transaction createTransaction(
             BigDecimal amount,
             TransactionType type,
